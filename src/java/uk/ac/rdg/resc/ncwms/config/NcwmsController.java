@@ -43,6 +43,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.joda.time.DateTime;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.ModelAndView;
 
 import uk.ac.rdg.resc.edal.cdm.PixelMap;
@@ -64,6 +66,7 @@ import uk.ac.rdg.resc.ncwms.exceptions.OperationNotSupportedException;
 import uk.ac.rdg.resc.ncwms.exceptions.WmsException;
 import uk.ac.rdg.resc.ncwms.graphics.BilinearInterpolator;
 import uk.ac.rdg.resc.ncwms.usagelog.UsageLogEntry;
+import uk.ac.rdg.resc.ncwms.util.Util;
 import uk.ac.rdg.resc.ncwms.wms.Dataset;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
@@ -76,6 +79,8 @@ import uk.ac.rdg.resc.ncwms.wms.ScalarLayer;
  * @author Jon Blower
  */
 public final class NcwmsController extends AbstractWmsController {
+
+    private Logger log;
     // This object handles requests for non-standard metadata
     private NcwmsMetadataController metadataController;
 
@@ -116,6 +121,7 @@ public final class NcwmsController extends AbstractWmsController {
     public void init() throws Exception {
         // Create a NcwmsMetadataController for handling non-standard metadata request
         this.metadataController = new NcwmsMetadataController(this.getConfig(), LAYER_FACTORY);
+        log = LoggerFactory.getLogger(this.getClass());
         super.init();
     }
     
@@ -364,12 +370,19 @@ public final class NcwmsController extends AbstractWmsController {
                 data = layerImpl.readHorizontalDomain(fti, zIndex, grid);
             }
             // Put the data in the tile cache
-            if (cacheEnabled)
+            if (cacheEnabled) {
+
+                log.debug("readDataGrid() - \n{}", Util.getMemoryReport());
+                log.debug("readDataGrid() - Caching data. key: {}  size: {}", key, data.size());
                 this.tileCache.put(key, data);
+                log.debug("readDataGrid() - \n{}",Util.getMemoryReport());
+            }
         }
 
         return data;
     }
+
+
 
     private List<Float> readSmoothedDataGrid(ScalarLayer layer, DateTime dateTime,
             double elevation, RegularGrid imageGrid, UsageLogEntry usageLogEntry)
