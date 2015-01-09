@@ -29,11 +29,8 @@ package uk.ac.rdg.resc.ncwms.config;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+
 import org.geotoolkit.metadata.iso.extent.DefaultGeographicBoundingBox;
 import org.geotoolkit.referencing.CRS;
 import org.joda.time.Chronology;
@@ -176,7 +173,25 @@ public final class PhaveosDataReader extends DataReader {
 
         return cms;
     }
-    
+
+    /**
+     * Returns last modified time of the resource being read.
+     *
+     * @param location
+     * @return The last modified time of the resource in milliseconds since the epoch.
+     */
+    @Override
+    public long getLastModified(String location) throws IOException {
+        File f = new File(location);
+        if (f.exists()) {
+            return f.lastModified();
+
+        }
+        throw new IOException("File '"+location+"' not found.");
+    }
+
+
+
     /** Uses the name of the file to deduce the date of the data */
     private static DateTime getDateTime(String filename)
     {

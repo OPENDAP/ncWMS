@@ -154,7 +154,23 @@ public class NSIDCSnowWaterDataReader extends DataReader
         
         return Arrays.asList(lm);
     }
-    
+
+    /**
+     * Returns last modified time of the resource being read.
+     *
+     * @param filename
+     * @return The last modified time of the resource in milliseconds since the epoch.
+     */
+    @Override
+    public long getLastModified(String filename) throws IOException {
+        File f = new File(filename);
+        if (f.exists()) {
+            return f.lastModified();
+
+        }
+        throw new IOException("File '"+filename+"' not found.");
+    }
+
     /**
      * Reads data from a file.  Reads data for a single timestep only.
      * This method knows

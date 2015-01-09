@@ -35,6 +35,7 @@ import org.geotoolkit.referencing.CRS;
 import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.geometry.BoundingBox;
 import uk.ac.rdg.resc.edal.util.Utils;
+import uk.ac.rdg.resc.ncwms.util.Util;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 
@@ -90,6 +91,13 @@ public class TileCacheKey implements Serializable
         this.layerId = layer.getId();
         this.setGrid(grid);
         this.filepath = filepath;
+
+
+
+
+        this.lastModified = layer.getDataset().getLastModifiedTime();
+        /*
+
         File f = new File(filepath);
         if (f.exists())
         {
@@ -107,10 +115,16 @@ public class TileCacheKey implements Serializable
         }
         if (WmsUtils.isOpendapLocation(filepath) || WmsUtils.isNcmlAggregation(filepath))
         {
-            // This is an OPeNDAP dataset or NcML aggregation, so we need
-            // to store the last-modified time of the relevant Dataset
-            this.datasetLastModified = layer.getDataset().getLastUpdateTime().getMillis();
+
+            // The Util.getLastModified() method determines the LMT for files or for web assets
+            // In the latter case the HTTP HEAD command is used to retrieve the LMT.
+            this.datasetLastModified = Util.getLastModified(filepath).getTime();
+
+
         }
+        */
+
+
         this.tIndex = tIndex;
         this.zIndex = zIndex;
         

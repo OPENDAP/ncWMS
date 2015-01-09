@@ -161,7 +161,7 @@ public abstract class DataReader
      * sensible.)</p>
      * <p>This default implementation simply makes multiple calls to
      * {@link #read(java.lang.String, uk.ac.rdg.resc.ncwms.metadata.Layer, int,
-     * int, uk.ac.rdg.resc.ncwms.datareader.HorizontalDomain) read()},
+     * int, uk.ac.rdg.resc.ncwms.DataReader.HorizontalDomain) read()},
      * which is not very efficient because the same file may be opened and closed
      * multiple times (a particular problem when reading from OPeNDAP servers).
      * Subclasses are encouraged to override this with a more efficient method.</p>
@@ -191,7 +191,7 @@ public abstract class DataReader
     /**
      * Reads and returns the metadata for all the layers (i.e. variables) in the
      * given dataset.
-     * @param dataset The dataset from which we'll read data
+     * @param ds The dataset from which we'll read data
      * @return Map of layer IDs mapped to {@link LayerImpl} objects
      * @throws FileNotFoundException if the location does not match
      * any existing files on the server
@@ -363,4 +363,11 @@ public abstract class DataReader
         }
         return files;
     }
+
+    /**
+     * Returns last modified time of the resource being read.
+     * @return The last modified time of the resource in milliseconds since the epoch.
+     */
+
+    public abstract long getLastModified(String resource) throws IOException;
 }

@@ -31,6 +31,7 @@ package uk.ac.rdg.resc.ncwms.config;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,7 @@ import uk.ac.rdg.resc.edal.cdm.CdmUtils;
 import uk.ac.rdg.resc.edal.coverage.CoverageMetadata;
 import uk.ac.rdg.resc.edal.coverage.domain.Domain;
 import uk.ac.rdg.resc.edal.geometry.HorizontalPosition;
+import uk.ac.rdg.resc.ncwms.util.Util;
 import uk.ac.rdg.resc.ncwms.util.WmsUtils;
 import uk.ac.rdg.resc.ncwms.wms.Layer;
 
@@ -79,6 +81,41 @@ public class DefaultDataReader extends DataReader
     }
 
     /**
+     * Returns last modified time of the resource being read.
+     *
+     * @param resource  The resource id (local or interweb URL) of the resource
+     * @return The last modified time of the resource in milliseconds since the epoch.
+     */
+    @Override
+    public long getLastModified(String resource) throws IOException {
+        NetcdfDataset nc = null;
+        try
+        {
+            // Open the dataset, using the cache for NcML aggregations
+            nc = openDataset(resource);
+
+            // We know there's a problem with the NetcdfDataset.getLastModified() method. So we'll try it,
+            // but if the output is bogus (in this case zero) we'll punt and use our LMT patch.
+            long lmt = nc.getLastModified();
+
+            if(lmt==0){
+                logger.warn("getLastModified() - NetcdfDataset.getLastModified() returned a 0. " +
+                        "This is probably a bug in Netcdf-Java for remote datasets.  " +
+                        "Now we'll try to figure it out for ourselves - if the LMT is legitimately  '0' our method " +
+                        "will correctly determine this and return the value.");
+                lmt = Util.getLastModified(resource).getTime();
+            }
+
+            return lmt;
+        }
+        finally
+        {
+            closeDataset(nc);
+        }
+
+    }
+
+    /**
      * Reads data from a NetCDF file.  Reads data for a single timestep only.
      * This method knows
      * nothing about aggregation: it simply reads data from the given file.
@@ -104,6 +141,10 @@ public class DefaultDataReader extends DataReader
         {
             // Open the dataset, using the cache for NcML aggregations
             nc = openDataset(filename);
+
+            long lmt = nc.getLastModified();
+            logger.debug("read(): Reading from dataset '{}', nc_lmt: {}",filename,lmt);
+
             // Read and return the data
             return CdmUtils.readHorizontalPoints(
                 nc,
@@ -246,9 +287,15 @@ public class DefaultDataReader extends DataReader
             nc = NetcdfDataset.acquireDataset(location, null);
             usedCache = true;
         }
+        else if(WmsUtils.isOpendapLocation(location))
+        {
+            // For  OPeNDAP datasets we use the cache because of the expense of retrieval.
+            nc = NetcdfDataset.acquireDataset(location, null);
+            usedCache = true;
+        }
         else
         {
-            // For local single files and OPeNDAP datasets we don't use the
+            // For local single files  we don't use the
             // cache, to ensure that we are always reading the most up-to-date
             // data.  There is a small possibility that the dataset cache will
             // have swallowed up all available file handles, in which case
@@ -258,7 +305,7 @@ public class DefaultDataReader extends DataReader
         }
         long openedDS = System.nanoTime();
         String verb = usedCache ? "Acquired" : "Opened";
-        logger.debug(verb + " NetcdfDataset in {} milliseconds", (openedDS - start) / 1.e6);
+        logger.debug(verb + " NetcdfDataset in {} milliseconds", TimeUnit.SECONDS.convert((openedDS - start), TimeUnit.NANOSECONDS));
         return nc;
     }
 
@@ -276,5 +323,8 @@ public class DefaultDataReader extends DataReader
             logger.error("IOException closing " + nc.getLocation(), ex);
         }
     }
+
+
+
     
 }

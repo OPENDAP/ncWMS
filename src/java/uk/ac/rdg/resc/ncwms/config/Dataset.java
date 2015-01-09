@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.config;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -90,7 +91,7 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     private int updateInterval = -1; // The update interval in minutes. -1 means "never update automatically"
 
     // We don't do "private List<Variable> variable..." here because if we do,
-    // the config file will contain "<variable class="java.util.ArrayList>",
+    // the config file will contain "<variable class="java.Util.ArrayList>",
     // presumably because the definition doesn't clarify what sort of List should
     // be used.
     // This allows the admin to override certain auto-detected parameters of
@@ -305,6 +306,35 @@ public class Dataset implements uk.ac.rdg.resc.ncwms.wms.Dataset
     public DateTime getLastUpdateTime()
     {
         return this.lastSuccessfulUpdateTime;
+    }
+
+    /**
+     * Returns last modified time of the Dataset.
+     * @return The last modified time of the Dataset in milliseconds since the epoch.
+     */
+    public long getLastModifiedTime()  {
+
+        String resource = this.getLocation();
+        try {
+            logger.debug("Getting data reader of type {}", this.getDataReaderClass());
+            DataReader dr = DataReader.forName(this.getDataReaderClass());
+            // Look for OPeNDAP datasets and update the credentials provider accordingly
+            this.config.updateCredentialsProvider(this);
+
+            this.appendLoadingProgress("Retrieving LMT for '"+resource+"'");
+
+            long lmt = dr.getLastModified(resource);
+
+            this.appendLoadingProgress("LMT retrieved. lmt: "+lmt);
+
+            return lmt;
+        }
+        catch(Exception e) {
+            logger.debug("getLastModifiedTime() - Unable to get LMT for resource '"+resource+"'");
+            return -1;
+        }
+
+
     }
 
     /**

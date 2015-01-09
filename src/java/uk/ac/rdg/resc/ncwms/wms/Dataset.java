@@ -28,6 +28,7 @@
 
 package uk.ac.rdg.resc.ncwms.wms;
 
+import java.io.IOException;
 import java.util.Collection;
 import org.joda.time.DateTime;
 
@@ -70,6 +71,12 @@ public interface Dataset
      * the dataset has never been loaded.
      */
     public DateTime getLastUpdateTime();
+
+    /**
+     * Returns last modified time of the Dataset.
+     * @return The last modified time of the Dataset in milliseconds since the epoch.
+     */
+    public long getLastModifiedTime();
 
     /**
      * Gets the {@link Layer} with the given {@link Layer#getId() id}.  The id
