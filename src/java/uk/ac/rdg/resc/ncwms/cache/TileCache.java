@@ -37,6 +37,8 @@ import net.sf.ehcache.Element;
 import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
 import net.sf.ehcache.config.DiskStoreConfiguration;
+import net.sf.ehcache.config.MemoryUnit;
+import net.sf.ehcache.config.PersistenceConfiguration;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -91,7 +93,10 @@ public class TileCache
     private static final Logger logger = LoggerFactory.getLogger(TileCache.class);
     
     private static final String CACHE_NAME = "tilecache";
-    private static final Float[] EMPTY_FLOAT_ARRAY = new Float[0];
+
+
+    // Using the empty array pattern for the retrieval of List contents is generally consider a performance no-no.
+    // private static final Float[] EMPTY_FLOAT_ARRAY = new Float[0];
 
     private CacheManager cacheManager;
 
@@ -101,8 +106,13 @@ public class TileCache
     /** The Config object containing the cache configuration: will be injected by Spring */
     private Config ncwmsConfig;
 
+
+
+
+
+
     /** Creates a TileCache in the given working directory. */
-    public void init()
+    public void init_old()
     {
         // Setting the location of the disk store programmatically is tedious,
         // requiring the creation of lots of objects...
@@ -113,7 +123,7 @@ public class TileCache
         tileCacheConfig.addDefaultCache(new CacheConfiguration());
         tileCacheConfig.setName("ncWMS-tile-cache");
         this.cacheManager = new CacheManager(tileCacheConfig);
-        
+
         Cache tileCache = new Cache(
             CACHE_NAME,                                      // Name for the cache
             ncwmsConfig.getCache().getMaxNumItemsInMemory(), // Maximum number of elements in memory
@@ -129,9 +139,143 @@ public class TileCache
             null,                                            // no bootstrap cache loader
             ncwmsConfig.getCache().getMaxNumItemsOnDisk()    // Maximum number of elements on disk
         );
-        
+
         this.cacheManager.addCache(tileCache);
         logger.info("Tile cache started");
+    }
+
+
+
+
+    /** Creates a TileCache in the given working directory. */
+    public void init()
+    {
+
+
+
+        double highWaterLimit = 0.50;
+
+        long maxBytesLocalDisk = 20; // Gigabytes
+
+        boolean constrainByMemorySize = false;
+
+        double empiricalScaleCoefficient = 3.533;
+
+
+        long maxHeap = Runtime.getRuntime().maxMemory();
+        logger.debug("init() - maxHeap:           "+maxHeap+" bytes");
+
+        long usedMemory = Runtime.getRuntime().totalMemory();
+        logger.debug("init() - usedMemory:        "+usedMemory+" bytes");
+
+        long available =  maxHeap-usedMemory;
+        logger.debug("init() - available:         "+available+" bytes available.");
+
+        logger.debug("init() - reserve:           "+ (1 - highWaterLimit) * 100 + "%");
+
+
+        // ##########################################################################################
+        // Here we apply a metric to the JVM's memory configuration to determine how much memory
+        // we might reasonably expect to allocated to a cache.
+        long maxBytesLocalHeap = (long) (available * highWaterLimit);
+        logger.debug("init() - maxBytesLocalHeap: "+maxBytesLocalHeap+" bytes based on a reserve of "+ (1 - highWaterLimit) * 100 + "% of the "+available+" bytes available.");
+
+
+        CacheConfiguration cc = new CacheConfiguration();
+
+         // Name for the cache
+         cc.name(CACHE_NAME);
+
+         // evict least-recently-used elements
+         cc.memoryStoreEvictionPolicy(MemoryStoreEvictionPolicy.LRU);
+
+
+         // cached elements are not eternal
+         cc.eternal(false);
+
+         // Elements will last for this number of seconds in the cache
+         cc.timeToLiveSeconds(ncwmsConfig.getCache().getElementLifetimeMinutes() * 60);
+
+         // Ignore time since last access/modification
+         cc.timeToIdleSeconds(0);
+
+
+        if(constrainByMemorySize){
+
+            logger.debug("init() - Limiting cache size by specifying memory footprint.");
+
+            // Max memory for cache
+            cc.maxBytesLocalHeap(maxBytesLocalHeap, MemoryUnit.BYTES);
+
+            // Max disk usage for cache
+            cc.maxBytesLocalDisk(maxBytesLocalDisk, MemoryUnit.GIGABYTES);
+        }
+        else {
+            logger.debug("init() - Limiting cache size by number of entries.");
+
+            // Compute the maximum tile size based on the current configuration.
+            long maxTileSize =  ncwmsConfig.getMaxImageWidth() *  ncwmsConfig.getMaxImageHeight() * 4; // Because a Float is 4 bytes in Java land.
+            logger.debug("init() - MaxTileSize: "+maxTileSize+" bytes (Based on "+ncwmsConfig.getMaxImageWidth()+"x"+ncwmsConfig.getMaxImageHeight()+" pixel max image size from the configuration)");
+
+
+            long cachedTileMemorySize = (long)(empiricalScaleCoefficient * maxTileSize);
+            logger.debug("init() - Estimated cache memory usage for one Tile: "+cachedTileMemorySize+" bytes (empirical Scale Coefficient: "+empiricalScaleCoefficient+")");
+
+            // Compute how many tiles (of max size) will fit in that allowed mem space
+            int inMemoryTileLimit = (int) (maxBytesLocalHeap/cachedTileMemorySize);
+
+
+            // Get the maxTiles value from the configuration.
+            int maxTilesInMemory = ncwmsConfig.getCache().getMaxNumItemsInMemory();
+            logger.debug("init() - maxTilesInMemory: "+maxTilesInMemory+" (From configuration))");
+
+            // Make the evaluation and update the maxTilesInMemory value if needed.
+            if(inMemoryTileLimit < maxTilesInMemory){
+                logger.warn("init() - The configuration for max objects/tiles in memory cache exceeds high water limit of {}% of available heap.",highWaterLimit*100);
+                logger.warn("init() - Resetting memory cache limit to {} Tiles",inMemoryTileLimit);
+                maxTilesInMemory = inMemoryTileLimit;
+            }
+
+
+            // Maximum number of elements in memory
+            cc.maxEntriesLocalHeap(maxTilesInMemory);
+
+            // Maximum number of elements on disk
+            cc.maxEntriesLocalDisk(ncwmsConfig.getCache().getMaxNumItemsOnDisk());
+
+            // We may want to look at using these to configure the cache...
+            // cc.maxEntriesInCache(maxTilesInMemory)
+
+        }
+
+
+         if(ncwmsConfig.getCache().isEnableDiskStore()){
+
+             // Saves stuff in a local disk cache that does not persist between restarts.
+             // Why no persistence? Because that's teh enterprise version of the ehcahe lib
+             // and that requires $$
+             cc.persistence(new PersistenceConfiguration().strategy(PersistenceConfiguration.Strategy.LOCALTEMPSWAP));
+
+
+             // number of seconds between clearouts of disk store
+             cc.diskExpiryThreadIntervalSeconds(1000);
+         }
+         else {
+             // Don't ever mess with the disk...
+             cc.persistence(new PersistenceConfiguration().strategy(PersistenceConfiguration.Strategy.NONE));
+         }
+
+
+        Configuration cacheManagerConfig = new Configuration()
+            .diskStore(new DiskStoreConfiguration()
+                    .path(cacheDirectory.getPath()));
+        cacheManagerConfig.setName("ncWMS-CacheManager");
+
+        cacheManagerConfig.addCache(cc);
+
+        this.cacheManager = new CacheManager(cacheManagerConfig);
+
+        logger.info("init() - Tile cache started");
     }
     
     /**
@@ -150,18 +294,25 @@ public class TileCache
     public List<Float> get(TileCacheKey key)
     {
         Cache cache = this.cacheManager.getCache(CACHE_NAME);
+        long start = System.nanoTime();
+        try {
         Element el = cache.get(key);
         if (el == null)
         {
-            logger.debug("Not found in tile cache: {}", key);
+            logger.debug("get() - Not found in tile cache: {}", key);
             return null;
         }
         else
         {
-            logger.debug("Found in tile cache");
-            Float[] arr = (Float[])el.getValue();
+            Float[] arr = (Float[])el.getObjectValue();
+            logger.debug("get() - Found in tile cache. size: {} bytes, key: {}",arr.length*4, key);
             return arr == null ? null : Arrays.asList(arr);
         }
+        }
+        finally {
+            logger.debug("get() - Elapsed time: {} us",(System.nanoTime()-start)/1000);
+        }
+
     }
     
     /**
@@ -169,9 +320,13 @@ public class TileCache
      */
     public void put(TileCacheKey key, List<Float> data)
     {
-        Float[] arr = data.toArray(EMPTY_FLOAT_ARRAY);
+        long start = System.nanoTime();
+
+        Float[] arr = data.toArray(new Float[data.size()]);
         this.cacheManager.getCache(CACHE_NAME).put(new Element(key, arr));
-        logger.debug("Data put into tile cache: {}", key);
+
+        logger.debug("put() - Data object added to tile cache. size: {} bytes, key: {}",arr.length*4, key);
+        logger.debug("put() - Elapsed time: {} us",(System.nanoTime()-start)/1000);
     }
 
     /** Called by Spring to set the directory for the cached tiles */
