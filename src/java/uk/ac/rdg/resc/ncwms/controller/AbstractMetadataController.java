@@ -221,7 +221,8 @@ public abstract class AbstractMetadataController
             throw new LayerNotDefinedException("null");
         }
         String datasetReqParameter = null;
-        for(String testDatasetReqParameter : request.getParameterMap().keySet()) {
+        for(Object o : request.getParameterMap().keySet()) {
+            String testDatasetReqParameter = (String) o;
             if(testDatasetReqParameter.equalsIgnoreCase("dataset")) {
                 datasetReqParameter = testDatasetReqParameter;
                 break;
