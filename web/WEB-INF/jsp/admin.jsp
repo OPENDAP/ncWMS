@@ -295,7 +295,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
 
                 <td>
                     Based on the current maximum image size of ${config.server.maxImageWidth}x${config.server.maxImageHeight} pixels this
-                    value will allow configure the ncWMS cache to store no more than ${maxTilesInMemory} Tiles in the disk cache.<br/>
+                    value will allow configure the ncWMS cache to store no more than ${maxTilesInMemory} Tiles in the in-memory cache.<br/>
                     <span style="color: red; ">If you change this value you must restart the server for your change to take effect.</span>
 
                 </td>
