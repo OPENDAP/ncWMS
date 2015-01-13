@@ -31,13 +31,14 @@ package uk.ac.rdg.resc.ncwms.cache;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Element;
 import net.sf.ehcache.config.CacheConfiguration;
 import net.sf.ehcache.config.Configuration;
 import net.sf.ehcache.config.DiskStoreConfiguration;
-import net.sf.ehcache.config.MemoryUnit;
 import net.sf.ehcache.config.PersistenceConfiguration;
 import net.sf.ehcache.store.MemoryStoreEvictionPolicy;
 import org.slf4j.Logger;
@@ -106,9 +107,12 @@ public class TileCache
     /** The Config object containing the cache configuration: will be injected by Spring */
     private Config ncwmsConfig;
 
+    private static AtomicLong cachedTileCount = new AtomicLong(0);
 
 
-
+    public static long getCachedTileCount(){
+        return cachedTileCount.get();
+    }
 
 
     /** Creates a TileCache in the given working directory. */
@@ -126,7 +130,7 @@ public class TileCache
 
         Cache tileCache = new Cache(
             CACHE_NAME,                                      // Name for the cache
-            ncwmsConfig.getCache().getMaxNumItemsInMemory(), // Maximum number of elements in memory
+            ncwmsConfig.getCache().getMaxCacheMemoryUtilization(), // Maximum number of elements in memory
             MemoryStoreEvictionPolicy.LRU,                   // evict least-recently-used elements
             ncwmsConfig.getCache().isEnableDiskStore(),      // Use the disk store?
             "",                                              // disk store path (ignored)
@@ -137,7 +141,7 @@ public class TileCache
             1000,                                            // number of seconds between clearouts of disk store
             null,                                            // no registered event listeners
             null,                                            // no bootstrap cache loader
-            ncwmsConfig.getCache().getMaxNumItemsOnDisk()    // Maximum number of elements on disk
+            ncwmsConfig.getCache().getMaxCacheDiskUtilization()    // Maximum number of elements on disk
         );
 
         this.cacheManager.addCache(tileCache);
@@ -152,14 +156,15 @@ public class TileCache
     {
 
 
+        //int reserve = ncwmsConfig.getCache().getAvailableMemoryReserve();
 
-        double highWaterLimit = 0.50;
+        //double highWaterLimit = 0.50;
 
-        long maxBytesLocalDisk = 20; // Gigabytes
+        //long maxBytesLocalDisk = 20; // Gigabytes
 
-        boolean constrainByMemorySize = false;
+        //boolean constrainByMemorySize = false;
 
-        double empiricalScaleCoefficient = 3.533;
+        //double empiricalScaleCoefficient = 3.533;
 
 
         long maxHeap = Runtime.getRuntime().maxMemory();
@@ -171,14 +176,28 @@ public class TileCache
         long available =  maxHeap-usedMemory;
         logger.debug("init() - available:         "+available+" bytes available.");
 
-        logger.debug("init() - reserve:           "+ (1 - highWaterLimit) * 100 + "%");
+        //logger.debug("init() - reserve:           "+ reserve + "%");
+
+        // Compute the maximum tile size based on the current configuration.
+        long maxTileSize =  ncwmsConfig.getMaxImageWidth() *  ncwmsConfig.getMaxImageHeight() * 16; // Because a Float object is 16 bytes in Java land.
+        logger.debug("init() - MaxTileSize: "+maxTileSize+" bytes (Based on "+ncwmsConfig.getMaxImageWidth()+"x"+ncwmsConfig.getMaxImageHeight()+" pixel max image size from the configuration)");
 
 
-        // ##########################################################################################
-        // Here we apply a metric to the JVM's memory configuration to determine how much memory
-        // we might reasonably expect to allocated to a cache.
-        long maxBytesLocalHeap = (long) (available * highWaterLimit);
-        logger.debug("init() - maxBytesLocalHeap: "+maxBytesLocalHeap+" bytes based on a reserve of "+ (1 - highWaterLimit) * 100 + "% of the "+available+" bytes available.");
+        // Read the cache utilization values from the configuration
+        long maxBytesLocalHeap = ncwmsConfig.getCache().getMaxCacheMemoryUtilization() * 1024 * 1024;  // Convert MB to B
+        logger.debug("init() - maxBytesLocalHeap: "+maxBytesLocalHeap+" bytes (from configuration) which is ~"+ (int)(100*((double)maxBytesLocalHeap)/available )+ "% of the "+available+" bytes available.");
+
+        // Compute the number of max size Tiles that will fit in the memory cache.
+        double maxTilesInMemory =  ((double)maxBytesLocalHeap/maxTileSize);
+        logger.debug("init() - maxTilesInMemory: "+maxTilesInMemory);
+
+        long maxDiskSpace = ((long)ncwmsConfig.getCache().getMaxCacheDiskUtilization()) * 1024 * 1024;    // Convert MB to B
+        logger.debug("init() - maxDiskSpace: "+maxDiskSpace+" bytes (from configuration).");
+
+        // Compute the number of max size Tiles that will fit in the disk cache.
+        double maxTilesOnDisk =  ((double)maxDiskSpace/maxTileSize);
+        logger.debug("init() - maxTilesOnDisk: "+maxTilesOnDisk);
+
 
 
         CacheConfiguration cc = new CacheConfiguration();
@@ -200,53 +219,35 @@ public class TileCache
          cc.timeToIdleSeconds(0);
 
 
-        if(constrainByMemorySize){
+        logger.debug("init() - Limiting cache size by number of entries because doing it by memory makes the put() operation expensive");
 
-            logger.debug("init() - Limiting cache size by specifying memory footprint.");
 
-            // Max memory for cache
-            cc.maxBytesLocalHeap(maxBytesLocalHeap, MemoryUnit.BYTES);
-
-            // Max disk usage for cache
-            cc.maxBytesLocalDisk(maxBytesLocalDisk, MemoryUnit.GIGABYTES);
+        /*  Dropped this because we are actually going to let users break stuff...
+        // Make the evaluation and update the maxTilesInMemory value if needed.
+        if(inMemoryTileLimit < maxTilesInMemory){
+            logger.warn("init() - The configuration for max objects/tiles in memory cache exceeds the reserve limit of {}% of available heap.",100 - reserve);
+            logger.warn("init() - Resetting memory cache limit to {} Tiles",inMemoryTileLimit);
+            maxTilesInMemory = inMemoryTileLimit;
+            ncwmsConfig.getCache().setMaxCacheMemoryUtilization(inMemoryTileLimit);
         }
-        else {
-            logger.debug("init() - Limiting cache size by number of entries.");
+        */
 
-            // Compute the maximum tile size based on the current configuration.
-            long maxTileSize =  ncwmsConfig.getMaxImageWidth() *  ncwmsConfig.getMaxImageHeight() * 4; // Because a Float is 4 bytes in Java land.
-            logger.debug("init() - MaxTileSize: "+maxTileSize+" bytes (Based on "+ncwmsConfig.getMaxImageWidth()+"x"+ncwmsConfig.getMaxImageHeight()+" pixel max image size from the configuration)");
+        // Maximum number of elements in memory
+        int tilesInMemory = (int)maxTilesInMemory;
+        cc.maxEntriesLocalHeap(tilesInMemory);
+        logger.debug("init() - Set maxEntriesLocalHeap: "+tilesInMemory);
 
-
-            long cachedTileMemorySize = (long)(empiricalScaleCoefficient * maxTileSize);
-            logger.debug("init() - Estimated cache memory usage for one Tile: "+cachedTileMemorySize+" bytes (empirical Scale Coefficient: "+empiricalScaleCoefficient+")");
-
-            // Compute how many tiles (of max size) will fit in that allowed mem space
-            int inMemoryTileLimit = (int) (maxBytesLocalHeap/cachedTileMemorySize);
+        // Maximum number of elements on disk
+        int tilesOnDisk = (int)maxTilesOnDisk;
+        cc.maxEntriesLocalDisk(tilesOnDisk);
+        logger.debug("init() - Set maxEntriesLocalDisk: " + tilesOnDisk);
 
 
-            // Get the maxTiles value from the configuration.
-            int maxTilesInMemory = ncwmsConfig.getCache().getMaxNumItemsInMemory();
-            logger.debug("init() - maxTilesInMemory: "+maxTilesInMemory+" (From configuration))");
-
-            // Make the evaluation and update the maxTilesInMemory value if needed.
-            if(inMemoryTileLimit < maxTilesInMemory){
-                logger.warn("init() - The configuration for max objects/tiles in memory cache exceeds high water limit of {}% of available heap.",highWaterLimit*100);
-                logger.warn("init() - Resetting memory cache limit to {} Tiles",inMemoryTileLimit);
-                maxTilesInMemory = inMemoryTileLimit;
-            }
 
 
-            // Maximum number of elements in memory
-            cc.maxEntriesLocalHeap(maxTilesInMemory);
+        // We may want to look at using these to configure the cache...
+        // cc.maxEntriesInCache(maxTilesInMemory)
 
-            // Maximum number of elements on disk
-            cc.maxEntriesLocalDisk(ncwmsConfig.getCache().getMaxNumItemsOnDisk());
-
-            // We may want to look at using these to configure the cache...
-            // cc.maxEntriesInCache(maxTilesInMemory)
-
-        }
 
 
          if(ncwmsConfig.getCache().isEnableDiskStore()){
@@ -276,6 +277,8 @@ public class TileCache
         this.cacheManager = new CacheManager(cacheManagerConfig);
 
         logger.info("init() - Tile cache started");
+
+
     }
     
     /**
@@ -325,6 +328,8 @@ public class TileCache
         Float[] arr = data.toArray(new Float[data.size()]);
         this.cacheManager.getCache(CACHE_NAME).put(new Element(key, arr));
 
+        cachedTileCount.set(getCachedTileCount_quick());
+
         logger.debug("put() - Data object added to tile cache. size: {} bytes, key: {}",arr.length*4, key);
         logger.debug("put() - Elapsed time: {} us",(System.nanoTime()-start)/1000);
     }
@@ -339,5 +344,10 @@ public class TileCache
     public void setConfig(Config config)
     {
         this.ncwmsConfig = config;
+    }
+
+
+    public long getCachedTileCount_quick(){
+        return cacheManager.getCache(CACHE_NAME).getKeysNoDuplicateCheck().size();
     }
 }

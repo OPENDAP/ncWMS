@@ -87,6 +87,8 @@ public final class NcwmsController extends AbstractWmsController {
     // Cache of recently-extracted data arrays: will be set by Spring
     private TileCache tileCache;
 
+
+
     // Object that extracts layers from the config object, given a layer name
     private final LayerFactory LAYER_FACTORY = new LayerFactory() {
         @Override
@@ -95,7 +97,7 @@ public final class NcwmsController extends AbstractWmsController {
             int finalSlashIndex = layerName.lastIndexOf("/");
             if (finalSlashIndex > 0) {
                 String datasetId = layerName.substring(0, finalSlashIndex);
-                Dataset ds = NcwmsController.this.getConfig().getDatasetById(datasetId);
+                Dataset ds = getConfig().getDatasetById(datasetId);
                 String layerId = layerName.substring(finalSlashIndex + 1);
                 if (ds == null) {
                     throw new LayerNotDefinedException(layerName);
@@ -511,7 +513,11 @@ public final class NcwmsController extends AbstractWmsController {
     }
 
     /** Called by Spring to set the tile cache */
-    public void setTileCache(TileCache tileCache) {
-        this.tileCache = tileCache;
+    public void setTileCache(TileCache tc) {
+        tileCache = tc;
+    }
+
+    public TileCache getTileCache(){
+        return tileCache;
     }
 }

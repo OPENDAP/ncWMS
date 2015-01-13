@@ -45,21 +45,25 @@ public class Cache
     
     @Element(name="elementLifetimeMinutes", required=false)
     private int elementLifetimeMinutes = 60 * 24; // default is one day
-    
+
+//    @Element(name="availableMemoryReserve", required=false)
+//    private int availableMemoryReserve = 50; // Reserves 50% of available memory (at startup) for everything "not" cache
+
+
     /**
-     * The number of items that will be held in memory in the cache
+     * The amount of memory (in megabytes) that that cache is allowed to utilize
      */
     @Element(name="maxNumItemsInMemory", required=false)
-    private int maxNumItemsInMemory = 200; // Gives around a 50MB memory footprint for 256*256 tiles
+    private int maxCacheMemoryUtilization = 200; // Size of the in-memory cache in MB
     
     @Element(name="enableDiskStore", required=false)
     private boolean enableDiskStore = true;
     
     /**
-     * The number of items that will be held on disk in the cache
+     * The number of megabytes of disk space that the cache is allowed to use.
      */
     @Element(name="maxNumItemsOnDisk", required=false)
-    private int maxNumItemsOnDisk = 2000; // Gives around a 500MB disk footprint for 256*256 tiles
+    private int maxCacheDiskUtilization = 2000; // Size of the disk cache in MB
     
     public boolean isEnabled()
     {
@@ -81,14 +85,14 @@ public class Cache
         this.elementLifetimeMinutes = elementLifetimeMinutes;
     }
 
-    public int getMaxNumItemsInMemory()
+    public int getMaxCacheMemoryUtilization()
     {
-        return maxNumItemsInMemory;
+        return maxCacheMemoryUtilization;
     }
 
-    public void setMaxNumItemsInMemory(int maxNumItemsInMemory)
+    public void setMaxCacheMemoryUtilization(int maxCacheMemoryUtilization)
     {
-        this.maxNumItemsInMemory = maxNumItemsInMemory;
+        this.maxCacheMemoryUtilization = maxCacheMemoryUtilization;
     }
 
     public boolean isEnableDiskStore()
@@ -101,13 +105,28 @@ public class Cache
         this.enableDiskStore = enableDiskStore;
     }
 
-    public int getMaxNumItemsOnDisk()
+    /*
+    public int getAvailableMemoryReserve()
     {
-        return maxNumItemsOnDisk;
+        return availableMemoryReserve;
     }
 
-    public void setMaxNumItemsOnDisk(int maxNumItemsOnDisk)
+    public void setAvailableMemoryReserve(int availableMemoryReserve)
     {
-        this.maxNumItemsOnDisk = maxNumItemsOnDisk;
+        this.availableMemoryReserve = availableMemoryReserve;
     }
+   */
+
+    public int getMaxCacheDiskUtilization()
+    {
+        return maxCacheDiskUtilization;
+    }
+
+    public void setMaxCacheDiskUtilization(int maxCacheDiskUtilization)
+    {
+        this.maxCacheDiskUtilization = maxCacheDiskUtilization;
+    }
+
+
+
 }

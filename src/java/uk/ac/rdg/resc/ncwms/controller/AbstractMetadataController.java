@@ -48,7 +48,6 @@ import org.springframework.web.servlet.ModelAndView;
 import uk.ac.rdg.resc.edal.coverage.grid.RegularGrid;
 import uk.ac.rdg.resc.edal.util.Range;
 import uk.ac.rdg.resc.edal.util.Ranges;
-import uk.ac.rdg.resc.ncwms.config.NcwmsController;
 import uk.ac.rdg.resc.ncwms.controller.AbstractWmsController.LayerFactory;
 import uk.ac.rdg.resc.ncwms.exceptions.LayerNotDefinedException;
 import uk.ac.rdg.resc.ncwms.exceptions.MetadataException;

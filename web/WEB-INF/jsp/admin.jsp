@@ -1,3 +1,6 @@
+<%@ page import="uk.ac.rdg.resc.ncwms.util.Util" %>
+<%@ page import="uk.ac.rdg.resc.ncwms.cache.TileCache" %>
+<%@ page import="uk.ac.rdg.resc.ncwms.config.NcwmsController" %>
 <%@page contentType="text/html"%>
 <%@page pageEncoding="UTF-8"%>
 <%@taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
@@ -7,6 +10,14 @@
 response.setHeader("Cache-Control","no-cache"); //HTTP 1.1
 response.setHeader("Pragma","no-cache"); //HTTP 1.0
 response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
+
+    long mbyte = 1024*1024;
+    long maxHeap = Runtime.getRuntime().maxMemory();
+    long usedMemory = Runtime.getRuntime().totalMemory();
+    long available =  maxHeap-usedMemory;
+
+    long cachedTileCount = TileCache.getCachedTileCount();
+
 %>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
    "http://www.w3.org/TR/html4/loose.dtd">
@@ -202,10 +213,68 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
         <!--<h2>THREDDS (experimental!)</h2>
         THREDDS catalog location: <input type="text" name="thredds.catalog.location" value="${config.threddsCatalogLocation}" size="60"/>-->
         
-        <h2>Cache settings</h2>
-        <p>This ncWMS server uses a cache of recently-extracted data arrays to increase
-        performance and reduce the load on the server.  Note that the cache will use up
-        some memory and some disk space (configurable below).</p>
+        <h2>Tile Cache settings</h2>
+        <p>
+            The ncWMS server uses a cache of recently-extracted data arrays (Tiles) to increase
+            performance and reduce the load on the server.  Enabling the cache will consume
+            both memory and  disk space (configurable below), and the number of Tiles
+            that can be held in the cache (in memory or on disk) is a direct function of the
+            Max Image Width and Max Image Height as defined below in the "Server Settings" area.<br/><br/>
+
+            It is <em>crucial</em> that the combined memory footprint of the web applications (ncWMS
+             and whatever else is running in your Web Service container) not exceed the available memory in the JVM,
+            as this can cause the JVM to enter a deadlocked state that will consume all available
+            JVM memory and CPU resources and may ultimately (at least on some operating systems)
+            cause a global system crash. The upshot is that memory allocation for the cache should be done
+            thoughtfully, and may require some tuning over time as the servers general pattern of
+            resource consumption during operations reveals itself. Load testing is strongly recommended as
+            a pathway to learning appropriate values before the server is rolled out for your enterprise.<br/> <br/>
+
+            The in memory cache size and disk cache sizes are specified in megabytes, and the values are
+            NOT checked against the current JVM settings. In other words you are allowed to break things. However
+            the system will provide some warnings regarding these allocations.
+
+
+
+        </p>
+
+
+        <table style="border: 1px solid black;border-collapse: collapse;font-family: Courier">
+            <th  colspan="2" style="border: 1px solid black; text-align: left;font-weight: bold">Current Memory Utilization</th>
+            <tr>
+                <td style="border: 1px solid black;">Total Available Memory (Max Heap) </td>
+                <td style="border: 1px solid black;text-align: right;"> <%=maxHeap/mbyte%> MB</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black;">Currently Allocated Memory </td>
+                <td style="border: 1px solid black;text-align: right;"> <%=usedMemory/mbyte%> MB</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid black;">Available Memory (unallocated) </td>
+                <td style="border: 1px solid black;text-align: right;"> <%=available/mbyte%> MB</td>
+            </tr>
+
+            <tr>
+                <td style="border: 1px solid black;">Cached Tile Count </td>
+                <td style="border: 1px solid black;text-align: center;"> <%=cachedTileCount%></td>
+            </tr>
+        </table>
+
+        <c:set var="maxTileSize" value="${(config.server.maxImageWidth * config.server.maxImageHeight * 16 / (1024 * 1024))}"/>
+        <p>
+        The current max Tile size of ${config.server.maxImageWidth}x${config.server.maxImageHeight} pixels requires ${maxTileSize} MB of cache memory for each tile.
+        </p>
+        <p>
+        While these values are presented to help inform you of the current state of the system please recognize that
+        viewing them immediately after starting the server (before it has actually been asked to produce a WMS
+        response) will provide a view of the memory utilization for the basic service stack (ncWMS plus whatever else
+        is running in the server), which can be informative for
+        assessing how much memory might be available for the cache during runtime. However, viewing these numbers
+        after the server has been fulfilling WMS requests will provide a more comprehensive view of the total service
+        memory utilization, including in memory caching activities.
+        </p>
+
+
         <table border="1">
             <tr>
                 <th>Enable cache?</th>
@@ -215,16 +284,21 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
             <tr>
                 <th>Lifetime of each cached array (minutes)</th>
                 <td><input type="text" name="cache.elementLifetime" value="${config.cache.elementLifetimeMinutes}"/></td>
-                <td>Data arrays will expire automatically from the cache after this number of minutes.
-                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+                <td>Data arrays will expire automatically from the cache after this number of minutes. <br/>
+                <span style="color: red; ">If you change this value you must restart the server for your change to take effect.</span></td>
             </tr>
             <tr>
-                <c:set var="memoryFootprintMB" value="${256*256*4*config.cache.maxNumItemsInMemory / (1024*1024)}"/>
-                <th>Maximum number of items to hold in memory</th>
-                <td><input type="text" name="cache.maxNumItemsInMemory" value="${config.cache.maxNumItemsInMemory}"/></td>
-                <td>If each item in the cache is a 256x256 array of 4-byte floating point data then 
-                    this value gives a memory footprint for the cache of <b>${memoryFootprintMB} megabytes</b>.
-                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+                <c:set var="maxTilesInMemory" value="${ config.cache.maxCacheMemoryUtilization / maxTileSize}"/>
+
+                <th>Maximum Memory For Cache (in MB)</th>
+                <td><input type="text" name="cache.maxCacheMemoryUtilization" value="${config.cache.maxCacheMemoryUtilization}"/></td>
+
+                <td>
+                    Based on the current maximum image size of ${config.server.maxImageWidth}x${config.server.maxImageHeight} pixels this
+                    value will allow configure the ncWMS cache to store no more than ${maxTilesInMemory} Tiles in the disk cache.<br/>
+                    <span style="color: red; ">If you change this value you must restart the server for your change to take effect.</span>
+
+                </td>
             </tr>
             <tr>
                 <th>Enable disk store?</th>
@@ -232,16 +306,16 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
                 <td>Check this box to enable the disk store (recommended).  If enabled, items that
                     do not fit into the memory footprint will overflow to disk.  All
                     items in the cache will automatically be written to disk when the
-                    server is shut down or restarted.
-                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+                    server is shut down or restarted.    <br/>
+                <span style="color: red; ">If you change this value you must restart the server for your change to take effect.</span></td>
             </tr>
             <tr>
-                <c:set var="diskFootprintMB" value="${256*256*4*config.cache.maxNumItemsOnDisk / (1024*1024)}"/>
-                <th>Maximum number of items to hold on disk</th>
-                <td><input type="text" name="cache.maxNumItemsOnDisk" value="${config.cache.maxNumItemsOnDisk}"/></td>
-                <td>If each item in the cache is a 256x256 array of 4-byte floating point data then 
-                    this value gives a disk footprint for the cache of <b>${diskFootprintMB} megabytes</b>.
-                <font color="red">If you change this value you must restart the server for your change to take effect.</font></td>
+                <c:set var="maxTilesOnDisk" value="${ config.cache.maxCacheDiskUtilization / maxTileSize}"/>
+                <th>Maximum Disk Utilization (in MB)</th>
+                <td><input type="text" name="cache.maxCacheDiskUtilization" value="${config.cache.maxCacheDiskUtilization}"/></td>
+                <td>Based on the current maximum image size of ${config.server.maxImageWidth}x${config.server.maxImageHeight} pixels this
+                 value will configure the ncWMS cache to store no more than ${maxTilesOnDisk} Tiles in the disk cache.<br/>
+                <span style="color: red; ">If you change this value you must restart the server for your change to take effect.</span></td>
             </tr>
         </table>
         

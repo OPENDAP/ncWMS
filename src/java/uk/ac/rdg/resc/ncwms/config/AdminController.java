@@ -329,10 +329,11 @@ public class AdminController extends MultiActionController
             // Set the properties of the cache
             config.getCache().setEnabled(request.getParameter("cache.enable") != null);
             config.getCache().setElementLifetimeMinutes(Integer.parseInt(request.getParameter("cache.elementLifetime")));
-            config.getCache().setMaxNumItemsInMemory(Integer.parseInt(request.getParameter("cache.maxNumItemsInMemory")));
+            config.getCache().setMaxCacheMemoryUtilization(Integer.parseInt(request.getParameter("cache.maxCacheMemoryUtilization")));
             config.getCache().setEnableDiskStore(request.getParameter("cache.enableDiskStore") != null);
-            config.getCache().setMaxNumItemsOnDisk(Integer.parseInt(request.getParameter("cache.maxNumItemsOnDisk")));
-            
+            config.getCache().setMaxCacheDiskUtilization(Integer.parseInt(request.getParameter("cache.maxCacheDiskUtilization")));
+            //config.getCache().setAvailableMemoryReserve(Integer.parseInt(request.getParameter("cache.availableMemoryReserve")));
+
             // Set the location of the THREDDS catalog if it has changed
             String newThreddsCatalogLocation = request.getParameter("thredds.catalog.location");
             if (!config.getThreddsCatalogLocation().trim().equals(newThreddsCatalogLocation))
