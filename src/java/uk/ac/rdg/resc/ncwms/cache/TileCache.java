@@ -180,12 +180,21 @@ public class TileCache
 
         // Compute the maximum tile size based on the current configuration.
         long maxTileSize =  ncwmsConfig.getMaxImageWidth() *  ncwmsConfig.getMaxImageHeight() * 16; // Because a Float object is 16 bytes in Java land.
-        logger.debug("init() - MaxTileSize: "+maxTileSize+" bytes (Based on "+ncwmsConfig.getMaxImageWidth()+"x"+ncwmsConfig.getMaxImageHeight()+" pixel max image size from the configuration)");
+        logger.info("init() - MaxTileSize: "+maxTileSize+" bytes (Based on "+ncwmsConfig.getMaxImageWidth()+"x"+ncwmsConfig.getMaxImageHeight()+" pixel max image size from the configuration)");
 
 
         // Read the cache utilization values from the configuration
         long maxBytesLocalHeap = ncwmsConfig.getCache().getMaxCacheMemoryUtilization() * 1024 * 1024;  // Convert MB to B
-        logger.debug("init() - maxBytesLocalHeap: "+maxBytesLocalHeap+" bytes (from configuration) which is ~"+ (int)(100*((double)maxBytesLocalHeap)/available )+ "% of the "+available+" bytes available.");
+        logger.info("init() - maxBytesLocalHeap: "+maxBytesLocalHeap+" bytes (from configuration) which is ~"+ (int)(100*((double)maxBytesLocalHeap)/available )+ "% of the "+available+" bytes available.");
+
+        if(maxBytesLocalHeap > available) {
+            logger.warn("init() - !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            logger.warn("init() -  THIS CONFIGURATION MAY CAUSE THE CACHE TO CONSUME ALL AVAILABLE MEMORY RESOURCES");
+            logger.warn("init() -  The configuration specified a cache memory size of {} bytes which is larger than the available memory of {} bytes",maxBytesLocalHeap,available);
+            logger.warn("init() -  THIS CONFIGURATION MAY CAUSE THE CACHE TO CONSUME ALL AVAILABLE MEMORY RESOURCES");
+            logger.warn("init() - !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        }
+
 
         // Compute the number of max size Tiles that will fit in the memory cache.
         double maxTilesInMemory =  ((double)maxBytesLocalHeap/maxTileSize);
@@ -235,12 +244,12 @@ public class TileCache
         // Maximum number of elements in memory
         int tilesInMemory = (int)maxTilesInMemory;
         cc.maxEntriesLocalHeap(tilesInMemory);
-        logger.debug("init() - Set maxEntriesLocalHeap: "+tilesInMemory);
+        logger.info("init() - Set maxEntriesLocalHeap: "+tilesInMemory);
 
         // Maximum number of elements on disk
         int tilesOnDisk = (int)maxTilesOnDisk;
         cc.maxEntriesLocalDisk(tilesOnDisk);
-        logger.debug("init() - Set maxEntriesLocalDisk: " + tilesOnDisk);
+        logger.info("init() - Set maxEntriesLocalDisk: " + tilesOnDisk);
 
 
 
