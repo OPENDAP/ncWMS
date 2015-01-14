@@ -126,16 +126,40 @@ public final class NcwmsController extends AbstractWmsController {
         log = LoggerFactory.getLogger(this.getClass());
         super.init();
     }
+
+
+    private static String getDataset(RequestParams params, HttpServletRequest request){
+        String dataset = params.getString("DATASET");
+
+        // Check the path for dynamic dataset content
+        String pathDataset = request.getPathInfo();
+        if(pathDataset!=null){
+            // Found a dynamic dataset name, woot!
+
+            // Dump leading / chars.
+            while(pathDataset.startsWith("/") && pathDataset.length()>0)
+                pathDataset = pathDataset.substring(1);
+
+            // If there's still something left, make it the dataset name.
+            if(pathDataset.length()>0)
+                dataset = pathDataset;
+        }
+        return dataset;
+
+    }
     
     /**
      * Appends the value of the DATASET parameter to LAYERS, LAYER, and QUERY_LAYERS, as appropriate
      */
-    static RequestParams addDynamicDatasetToParams(RequestParams params, HttpServletRequest httpServletRequest) {
-        String dataset = params.getString("DATASET");
+    static RequestParams addDynamicDatasetToParams(RequestParams params, HttpServletRequest request) {
+
+        String dataset = getDataset(params,request);
+
         if (dataset != null && !"".equals(dataset)) {
-            Map<String, String[]> parameters = new HashMap<String, String[]>(
-                    httpServletRequest.getParameterMap());
+            Map<String, String[]> parameters = new HashMap<String, String[]>(request.getParameterMap());
+
             /*
+
              * We have a DATASET parameter. Add it to each of the layer names
              */
             String layersStr = params.getString("layers");
@@ -227,7 +251,7 @@ public final class NcwmsController extends AbstractWmsController {
     protected ModelAndView dispatchWmsRequest(String request, RequestParams params,
             HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
             UsageLogEntry usageLogEntry) throws Exception {
-        
+
         params = addDynamicDatasetToParams(params, httpServletRequest);
 
         if (request.equals("GetCapabilities")) {
@@ -293,7 +317,8 @@ public final class NcwmsController extends AbstractWmsController {
 
         // The DATASET parameter is an optional parameter that allows a
         // Capabilities document to be generated for a single dataset only
-        String datasetId = params.getString("dataset");
+        String datasetId = getDataset(params,httpServletRequest);
+
 
         if (datasetId == null || datasetId.trim().equals("")) {
             // No specific dataset has been chosen so we create a Capabilities

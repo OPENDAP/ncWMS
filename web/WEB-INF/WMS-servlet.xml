@@ -137,13 +137,13 @@
     <bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
         <property name="alwaysUseFullPath" value="true"/>
         <property name="mappings">
-            <value>
-                /admin/* = adminController
-                /wms = wmsController
-                /screenshots/* = screenshotController
-                /index.jsp = frontPageController
-                / = frontPageController
-            </value>
+            <props>
+                <prop key="/admin/*"       >adminController</prop>
+                <prop key="/wms/**"        >wmsController</prop>
+                <prop key="/screenshots/*" >screenshotController</prop>
+                <prop key="/index.jsp"     >frontPageController</prop>
+                <prop key="/"              >frontPageController</prop>
+            </props>
         </property>
     </bean>
     
