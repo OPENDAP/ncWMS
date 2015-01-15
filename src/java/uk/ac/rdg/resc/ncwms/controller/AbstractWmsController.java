@@ -189,7 +189,7 @@ public abstract class AbstractWmsController extends AbstractController {
         // Create an object that allows request parameters to be retrieved in
         // a way that is not sensitive to the case of the parameter NAMES
         // (but is sensitive to the case of the parameter VALUES).
-        RequestParams params = new RequestParams(httpServletRequest.getParameterMap());
+        RequestParams params = new RequestParams(httpServletRequest);
 
         try {
             // Check the REQUEST parameter to see if we're producing a capabilities

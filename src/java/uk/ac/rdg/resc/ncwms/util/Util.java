@@ -9,11 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
 
 
 /**
@@ -77,6 +74,7 @@ public class Util {
             }
         }
         else {
+            // Since it doesn't appear to be a URL well assume it's a file on our local system...
             File f = new File(location);
             if (f.exists()) {
                 if (f.isFile()) {
