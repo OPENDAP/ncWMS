@@ -404,6 +404,15 @@ public class Config implements ServerConfig, ApplicationContextAware {
                 return null;
             }
 
+            String dynamicServiceUrl = dynamicService.getServiceUrl();
+
+            // Make sure we don't end up with a extraneous "/" char in the URL
+            if(dynamicServiceUrl.endsWith("/") && datasetPath.startsWith("/")){
+                while(datasetPath.startsWith("/") && datasetPath.length()>0){
+                    datasetPath = datasetPath.substring(1);
+                }
+            }
+
             String datasetUrl = dynamicService.getServiceUrl() + datasetPath;
 
             String title = datasetId;
