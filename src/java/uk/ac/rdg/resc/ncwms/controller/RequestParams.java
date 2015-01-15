@@ -45,7 +45,7 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class RequestParams
 {
-    private Map<String, String> paramMap =  new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    private Map<String, String> paramMap =  new TreeMap<String,String>(String.CASE_INSENSITIVE_ORDER);
     
     /**
      * Creates a new RequestParams object from the given Map of parameter names
@@ -303,7 +303,7 @@ public class RequestParams
 
         if (dataset != null && !"".equals(dataset)) {
 
-            Map<String, String> parameters = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            Map<String, String> parameters = new TreeMap<String,String>(String.CASE_INSENSITIVE_ORDER);
             parameters.putAll(paramMap);
 
 
