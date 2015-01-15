@@ -102,7 +102,7 @@ public abstract class AbstractMetadataController
             }
             else if (item.equals("minmax"))
             {
-                RequestParams params = new RequestParams(request.getParameterMap());
+                RequestParams params = new RequestParams(request);
                 return this.showMinMax(params, request, usageLogEntry);
             }
             else if (item.equals("animationTimesteps"))
@@ -214,24 +214,15 @@ public abstract class AbstractMetadataController
      */
     private Layer getLayer(HttpServletRequest request) throws LayerNotDefinedException
     {
+        RequestParams params = new RequestParams(request);
         String layerName = request.getParameter("layerName");
         if (layerName == null)
         {
             throw new LayerNotDefinedException("null");
         }
-        String datasetReqParameter = null;
-        for(Object o : request.getParameterMap().keySet()) {
-            String testDatasetReqParameter = (String) o;
-            if(testDatasetReqParameter.equalsIgnoreCase("dataset")) {
-                datasetReqParameter = testDatasetReqParameter;
-                break;
-            }
-        }
-        if(datasetReqParameter != null) {
-            String datasetId = request.getParameter(datasetReqParameter);
-            if(datasetId != null) {
+        String datasetId = params.getString("dataset");
+        if(datasetId != null) {
                 layerName = datasetId+"/"+layerName;
-            }
         }
         return this.layerFactory.getLayer(layerName);
     }

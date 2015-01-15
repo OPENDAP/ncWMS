@@ -93,7 +93,10 @@ class NcwmsMetadataController extends AbstractMetadataController
     @Override
     protected ModelAndView showMinMax(RequestParams params, HttpServletRequest request,
             UsageLogEntry usageLogEntry) throws Exception {
-        params = NcwmsController.addDynamicDatasetToParams(params, request);
+
+        // Refactored into RequestParams
+        // params = NcwmsController.addDynamicDatasetToParams(params, request);
+
         return super.showMinMax(params, request, usageLogEntry);
     }
     
@@ -157,7 +160,7 @@ class NcwmsMetadataController extends AbstractMetadataController
     protected ModelAndView showMenu(HttpServletRequest request, UsageLogEntry usageLogEntry)
         throws Exception
     {
-        RequestParams params = new RequestParams(request.getParameterMap());
+        RequestParams params = new RequestParams(request);
         Map<String, uk.ac.rdg.resc.ncwms.config.Dataset> allDatasets;
         String datasetId = params.getString("dataset");
         if(datasetId != null && !datasetId.equals("")) {

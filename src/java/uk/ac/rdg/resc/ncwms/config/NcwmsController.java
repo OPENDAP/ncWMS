@@ -128,7 +128,16 @@ public final class NcwmsController extends AbstractWmsController {
     }
 
 
-    private static String getDataset(RequestParams params, HttpServletRequest request){
+    /*
+    ########################################################################################################
+    ########################################################################################################
+    ######## Moved to RequestPrams.java ####################################################################
+    ########################################################################################################
+
+
+    private static String getDatasetId(RequestParams params, HttpServletRequest request){
+
+
         String dataset = params.getString("DATASET");
 
         // Check the path for dynamic dataset content
@@ -147,21 +156,39 @@ public final class NcwmsController extends AbstractWmsController {
         return dataset;
 
     }
-    
+
+    */
+
     /**
      * Appends the value of the DATASET parameter to LAYERS, LAYER, and QUERY_LAYERS, as appropriate
      */
-    static RequestParams addDynamicDatasetToParams(RequestParams params, HttpServletRequest request) {
+    /*
+    ########################################################################################################
+    ########################################################################################################
+    ######## Moved to RequestPrams.java ####################################################################
+    ########################################################################################################
 
-        String dataset = getDataset(params,request);
+
+    public static RequestParams addDynamicDatasetToParams(RequestParams params, HttpServletRequest request) {
+
+        String dataset = getDatasetId(params, request);
 
         if (dataset != null && !"".equals(dataset)) {
             Map<String, String[]> parameters = new HashMap<String, String[]>(request.getParameterMap());
 
-            /*
 
-             * We have a DATASET parameter. Add it to each of the layer names
-             */
+            // If the dataset parameter does not exist then this MUST be a dataset defined
+            // in the URL path, so we add parameter to the list for downstream compatibility.
+            //
+            if(!parameters.containsKey("dataset")){
+                String dsArray[] = new String[1];
+                dsArray[0] = dataset;
+                parameters.put("dataset",dsArray);
+
+            }
+            //
+            // Add the dataset name to each of the layer names
+            //
             String layersStr = params.getString("layers");
             StringBuilder finalLayersString = new StringBuilder();
             if (layersStr != null && !"".equals(layersStr)) {
@@ -169,12 +196,14 @@ public final class NcwmsController extends AbstractWmsController {
                 for (String layer : layers) {
                     finalLayersString.append(dataset + "/" + layer + ",");
                 }
-                /* Remove final comma */
+                //
+                // Remove final comma
+                //
                 finalLayersString.deleteCharAt(finalLayersString.length() - 1);
 
-                /*
-                 * Get the case-insensitive version of the key
-                 */
+                //
+                // Get the case-insensitive version of the key
+                //
                 String layersKey = null;
                 for (String key : parameters.keySet()) {
                     if (key.equalsIgnoreCase("layers")) {
@@ -183,15 +212,15 @@ public final class NcwmsController extends AbstractWmsController {
                     }
                 }
                 if (layersKey != null) {
-                    /*
-                     * Check should be unnecessary
-                     */
+                    //
+                    //Check should be unnecessary
+                    //
                     parameters.put(layersKey, new String[] { finalLayersString.toString() });
                 }
             }
-            /*
-             * If applicable, add it to the QUERY_LAYERS parameter too
-             */
+            //
+            // If applicable, add it to the QUERY_LAYERS parameter too
+            //
             String querylayersStr = params.getString("query_layers");
             StringBuilder finalQueryLayersString = new StringBuilder();
             if (querylayersStr != null && !"".equals(querylayersStr)) {
@@ -199,12 +228,13 @@ public final class NcwmsController extends AbstractWmsController {
                 for (String queryLayer : queryLayers) {
                     finalQueryLayersString.append(dataset + "/" + queryLayer + ",");
                 }
-                /* Remove final comma */
+                //
+                // Remove final comma
+                //
                 finalQueryLayersString.deleteCharAt(finalQueryLayersString.length() - 1);
-                
-                /*
-                 * Get the case-insensitive version of the key
-                 */
+                //
+                // Get the case-insensitive version of the key
+                //
                 String queryLayersKey = null;
                 for (String key : parameters.keySet()) {
                     if (key.equalsIgnoreCase("query_layers")) {
@@ -213,21 +243,20 @@ public final class NcwmsController extends AbstractWmsController {
                     }
                 }
                 if (queryLayersKey != null) {
-                    /*
-                     * Check should be unnecessary
-                     */
+                    //
+                    // Check should be unnecessary
+                    //
                     parameters.put(queryLayersKey, new String[] { finalQueryLayersString.toString() });
                 }
             }
-            /*
-             * If applicable, add it to the LAYER parameter too
-             */
+            //
+            // If applicable, add it to the LAYER parameter too
+            //
             String layerStr = params.getString("layer");
             if (layerStr != null && !"".equals(layerStr)) {
                 layerStr = dataset + "/" + layerStr;
-                /*
-                 * Get the case-insensitive version of the key
-                 */
+                //
+                // Get the case-insensitive version of the key
                 String layerKey = null;
                 for (String key : parameters.keySet()) {
                     if (key.equalsIgnoreCase("layer")) {
@@ -236,9 +265,9 @@ public final class NcwmsController extends AbstractWmsController {
                     }
                 }
                 if (layerKey != null) {
-                    /*
-                     * Check should be unnecessary
-                     */
+                    //
+                    // Check should be unnecessary
+                    //
                     parameters.put(layerKey, new String[] { layerStr });
                 }
             }
@@ -246,13 +275,16 @@ public final class NcwmsController extends AbstractWmsController {
         }
         return params;
     }
+    */
+
     
     @Override
     protected ModelAndView dispatchWmsRequest(String request, RequestParams params,
             HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse,
             UsageLogEntry usageLogEntry) throws Exception {
-
-        params = addDynamicDatasetToParams(params, httpServletRequest);
+        //
+        // Refactored in RequestParams
+        // params = addDynamicDatasetToParams(params, httpServletRequest);
 
         if (request.equals("GetCapabilities")) {
             return this.getCapabilities(params, httpServletRequest, usageLogEntry);
@@ -317,8 +349,9 @@ public final class NcwmsController extends AbstractWmsController {
 
         // The DATASET parameter is an optional parameter that allows a
         // Capabilities document to be generated for a single dataset only
-        String datasetId = getDataset(params,httpServletRequest);
+        // String datasetId = getDatasetId(params, httpServletRequest);
 
+        String datasetId = params.getString("DaTaSeT");
 
         if (datasetId == null || datasetId.trim().equals("")) {
             // No specific dataset has been chosen so we create a Capabilities
