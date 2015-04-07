@@ -132,6 +132,11 @@ class NcwmsMetadataController extends AbstractMetadataController
         try
         {
             // TODO: better error handling
+            // TODO: Authentication
+            // TODO: Whitelist eval URLs is at all possible.
+
+
+
             URLConnection conn = new URL(fullURL.toString()).openConnection();
             // Set header information (TODO: do all headers)
             response.setContentType(conn.getContentType());

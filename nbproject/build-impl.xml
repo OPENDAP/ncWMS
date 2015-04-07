@@ -1511,4 +1511,67 @@ exists or setup the property manually. For example like this:
     </target>
     <target depends="init,undeploy-clean,deps-clean,do-clean,check-clean,-post-clean" description="Clean build products." name="clean"/>
     <target depends="clean" description="Clean build products." name="clean-ear"/>
+
+
+
+
+
+
+    <!-- ###################################################################################################### -->
+    <!-- ###################################################################################################### -->
+    <!-- ###################################################################################################### -->
+    <!-- ###################################################################################################### -->
+    <!-- ###################################################################################################### -->
+    <!-- ###################################################################################################### -->
+
+    <property name="WebInfResources.dir" location="web/WEB-INF"/>
+
+
+    <available classname="com.fortify.dev.ant.SourceanalyzerTask"
+               property="fortify.present"/>
+
+    <property name="sourceanalyzer.buildid" value="FortifyBuild"/>
+    <property name="rules.dir" value="fortify"/>
+
+
+    <target name="fortify" if="fortify.present">
+        <typedef name="sourceanalyzer"
+                 classname="com.fortify.dev.ant.SourceanalyzerTask"/>
+
+
+        <!-- call clean to ensure that all source files are recompiled -->
+        <antcall target="clean"/>
+
+
+
+        <!-- call the compile target using the SCA Compiler Adapter to -->
+        <!-- translate all source files -->
+        <antcall target="-do-compile">
+            <param name="build.compiler"
+                   value="com.fortify.dev.ant.SCACompiler"/>
+        </antcall>
+
+
+        <!-- capture all configuration files in the WEB-INF directory -->
+        <echo>sourceanalyzer ${WebInfResources.dir}</echo>
+        <sourceanalyzer buildid="${sourceanalyzer.buildid}"
+                       >
+            <fileset dir="${WebInfResources.dir}">
+                <include name="**/*.properties"/>
+                <include name="**/*.xml"/>
+            </fileset>
+        </sourceanalyzer>
+
+
+
+        <!-- run analysis -->
+        <echo>sourceanalyzer scan</echo>
+        <sourceanalyzer buildid="${sourceanalyzer.buildid}"
+                        scan="true"
+                        resultsfile="build/issues.fpr"
+                >
+        </sourceanalyzer>
+    </target>
+
+
 </project>

@@ -357,7 +357,7 @@ public class ScreenshotController extends MultiActionController
     {
         log.debug("Called getScreenshot with params {}", request.getParameterMap());
         String imageName = request.getParameter("img");
-        if (imageName == null) throw new Exception("Must give a screenshot image name");
+
         File screenshotFile = this.getImageFile(imageName);
         InputStream in = null;
         OutputStream out = null;
@@ -389,9 +389,22 @@ public class ScreenshotController extends MultiActionController
         }
     }
 
-    private File getImageFile(String imageName)
+    private File getImageFile(String imageName) throws Exception
     {
-        return new File(this.screenshotCache, imageName);
+        if (imageName == null)
+            throw new Exception("getImageFile() - Missing image name.");
+
+
+        // Name is built in createScreenshot().
+        // String imageName = "snapshot" + RANDOM.nextLong() + System.currentTimeMillis() + ".png";
+
+        // Inspect name for conformity.
+        if(imageName.matches("snapshot-?[0-9]*\\.png$") ) {
+            return new File(this.screenshotCache, imageName);
+        }
+
+        throw new Exception("getImageFile() - Invalid image name.");
+
     }
 
     /**

@@ -177,13 +177,13 @@ public class Config implements ServerConfig, ApplicationContextAware {
              */
             config = PERSISTER.read(Config.class, configFile, false);
             config.configFile = configFile;
-            logger.debug("Loaded configuration from {}", configFile.getPath());
+            logger.info("Loaded configuration from {}", configFile.getPath());
         } else {
             // We must make a new config file and save it
             config = new Config();
             config.configFile = configFile;
             config.save();
-            logger.debug("Created new configuration object and saved to {}", configFile.getPath());
+            logger.info("Created new configuration object and saved to {}", configFile.getPath());
         }
 
         config.lastUpdateTime = new DateTime();
