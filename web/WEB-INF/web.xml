@@ -14,19 +14,7 @@
         <description>Required by Spring to integrate with Acegi</description>
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
     </listener>
-    <!--filter>
-        <description>Acegi Security filter, secures the admin pages</description>
-        <filter-name>Acegi Filter Chain Proxy</filter-name>
-        <filter-class>org.acegisecurity.util.FilterToBeanProxy</filter-class>
-        <init-param>
-            <param-name>targetClass</param-name>
-            <param-value>org.acegisecurity.util.FilterChainProxy</param-value>
-        </init-param>
-    </filter>
-    <filter-mapping>
-        <filter-name>Acegi Filter Chain Proxy</filter-name>
-        <url-pattern>/admin/*</url-pattern>
-    </filter-mapping -->
+
 
     <servlet-mapping>
         <servlet-name>WMS</servlet-name>
@@ -58,7 +46,7 @@
     </welcome-file-list>
 
     <!-- Define a Security Constraint on the Admin command and user interfaces -->
-    <!-- security-constraint>
+    <security-constraint>
         <web-resource-collection>
             <web-resource-name>ncWMS Admin Interface</web-resource-name>
             <url-pattern>/admin/*</url-pattern>
@@ -71,7 +59,7 @@
         <user-data-constraint>
             <transport-guarantee>CONFIDENTIAL</transport-guarantee>
         </user-data-constraint>
-    </security-constraint -->
+    </security-constraint>
 
 
 

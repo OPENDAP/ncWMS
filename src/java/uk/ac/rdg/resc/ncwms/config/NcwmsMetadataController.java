@@ -133,7 +133,7 @@ class NcwmsMetadataController extends AbstractMetadataController
         {
             // TODO: better error handling
             // TODO: Authentication
-            // TODO: Whitelist eval URLs is at all possible.
+            // TODO: Whitelist eval URLs if at all possible.
 
 
 
@@ -141,6 +141,7 @@ class NcwmsMetadataController extends AbstractMetadataController
             // Set header information (TODO: do all headers)
             response.setContentType(conn.getContentType());
             response.setContentLength(conn.getContentLength());
+
             in = conn.getInputStream();
             out = response.getOutputStream();
             byte[] buf = new byte[8192];
