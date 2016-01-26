@@ -40,6 +40,14 @@ div.help {
     border: 0;
 }
 
+#opendaplogo {
+    position: absolute;
+    top: 630px;
+    left: 20px;
+    border: 0;
+}
+
+
 /* Style for the main panel */
 #mainPanel {
     position: absolute;
