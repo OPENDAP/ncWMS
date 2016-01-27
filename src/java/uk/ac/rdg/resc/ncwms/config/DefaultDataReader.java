@@ -99,7 +99,7 @@ public class DefaultDataReader extends DataReader
             long lmt = nc.getLastModified();
 
             if(lmt==0){
-                logger.warn("getLastModified() - NetcdfDataset.getLastModified() returned a 0. " +
+                logger.debug("getLastModified() - NetcdfDataset.getLastModified() returned a 0. " +
                         "This is probably a bug in Netcdf-Java for remote datasets.  " +
                         "Now we'll try to figure it out for ourselves - if the LMT is legitimately  '0' our method " +
                         "will correctly determine this and return the value.");
