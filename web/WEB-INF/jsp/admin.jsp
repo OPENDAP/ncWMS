@@ -31,7 +31,7 @@ response.setDateHeader ("Expires", 0); //prevents caching at the proxy server
     </head>
     <body>
 
-    <h1>ncWMS Admin page</h1>
+    <h1>ncWMS-1.4 Admin page</h1>
 
     <p><a href="../godiva2.html">Godiva2 interface</a></p>
     <c:choose>
